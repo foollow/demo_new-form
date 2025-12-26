@@ -3,614 +3,281 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>审批模板管理系统</title>
-    <!-- 导入 Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- 导入 Lucide 图标库 -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>表单动画效果</title>
     <style>
-        /* 样式规范 */
-        :root {
-            --primary-color: #166FF7;
-            --bg-gray: #f7f7f8;
-            --border-color: #eaecf0;
-            --text-main: #111925;
-            --text-secondary: rgba(17, 25, 37, 0.65);
-            --transition-curve: cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
+        /* Basic setup and centering for the popup */
         body {
             margin: 0;
             padding: 0;
-            background-color: #ffffff;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, PingFang SC, Hiragino Sans GB, Microsoft YaHei, SimSun, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
-            color: var(--text-main);
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .app-container {
-            width: 872px;
-            margin-left: 24px;
-            padding-top: 40px;
-            padding-bottom: 80px;
-        }
-
-        /* 页面切换逻辑 */
-        .page { display: none; }
-        .page.active { display: block; animation: fadeIn 0.3s ease-in-out; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* 模拟模式提示 */
-        .demo-banner {
-            background: #fffbe6;
-            border: 1px solid #ffe58f;
-            padding: 8px 16px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            font-size: 13px;
-            color: #856404;
+            background-color: white;
+            font-family: sans-serif;
             display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* 从空白创建卡片 */
-        .create-blank-card {
-            width: 200px;
-            height: 120px;
-            background-color: var(--bg-gray);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease-in-out;
-            margin-bottom: 40px;
-        }
-
-        .create-blank-card:hover {
-            box-shadow: 0 2px 6px 0 rgba(48,54,64,.03), 0 3px 6px 3px rgba(48,54,64,.01), 0 13px 39px 0 rgba(48,54,64,.15);
-        }
-
-        .create-blank-card i { color: #999; margin-bottom: 4px; }
-        .create-blank-card span { font-size: 14px; color: var(--text-secondary); }
-
-        /* 标题栏与搜索 */
-        .section-header {
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            min-height: 100vh;
+            overflow: hidden; /* Hide anything that goes off-screen */
         }
 
-        .header-left { display: flex; align-items: center; gap: 8px; }
-        .header-left h2 { font-size: 16px; font-weight: 500; margin: 0; color: var(--text-main); }
-        
-        .header-right { display: flex; gap: 12px; align-items: center; }
-        
-        .search-wrapper {
+        /* The main popup container */
+        .popup {
+            width: 298px;
+            height: 310px;
             position: relative;
-            width: 300px;
+            background-image: url('https://km.sankuai.com/api/file/cdn/2714970292/185946730941?contentType=1&isNewContent=false');
+            background-size: cover;
+            background-repeat: no-repeat;
         }
 
-        .search-input {
-            width: 100%;
-            height: 32px;
-            padding: 0 32px;
-            border-radius: 8px;
-            border: 1px solid rgba(17, 25, 37, 0.15);
-            font-size: 14px;
-            box-sizing: border-box;
-            transition: all 0.3s ease-in-out;
-        }
-
-        .search-input:focus { outline: none; border-color: var(--primary-color); }
-        .search-icon { position: absolute; left: 10px; top: 8px; color: #999; pointer-events: none; }
-        .clear-icon { position: absolute; right: 10px; top: 8px; cursor: pointer; color: #ccc; display: none; }
-
-        /* 网格布局 */
-        .template-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 200px);
-            gap: 24px;
-            margin-top: 20px;
-        }
-
-        /* 模板卡片 */
-        .template-card {
-            width: 200px;
-            height: 232px;
-            background: var(--bg-gray);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 16px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            transition: all 0.3s ease-in-out;
-            position: relative;
-        }
-
-        .template-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-        }
-
-        .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-        .card-icon { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; background: #fff; border: 1px solid #eee; }
-        .tag-new { font-size: 10px; background: #ff4d4f; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-
-        .card-title { font-size: 15px; font-weight: 500; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #111925; }
-        .card-desc { font-size: 12px; color: #666; line-height: 1.5; height: 54px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; margin-bottom: 12px; }
-        
-        .card-footer { display: flex; gap: 8px; margin-top: auto; }
-        .btn-action {
-            flex: 1;
-            height: 28px;
+       
+        .diagram-wrapper {
+            position: absolute;
+            left: 21px;
+            top: 37px; /* -137px */
+            width: 256px;  /* 宽度保持一致 */
+            height: 142px; /* 设置新的高度 */
             border-radius: 6px;
-            font-size: 12px;
-            cursor: pointer;
-            border: 1px solid transparent;
-            background: #fff;
-            transition: all 0.3s ease-in-out;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-        }
-        .btn-preview { border-color: rgba(17, 25, 37, 0.1); color: var(--text-main); }
-        .btn-preview:hover { background: rgba(17, 25, 37, 0.05); }
-        .btn-use { border-color: var(--primary-color); color: var(--primary-color); }
-        .btn-use:hover { background: rgba(22, 111, 247, 0.1); }
-
-        /* 后台管理页专用 */
-        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
-        .btn-primary { background: var(--primary-color); color: #fff; border: none; padding: 0 16px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: opacity 0.2s; }
-        .btn-primary:hover { opacity: 0.9; }
-        .btn-ghost { background: transparent; border: 1px solid #d9d9d9; padding: 0 12px; height: 32px; border-radius: 6px; cursor: pointer; }
-
-        /* 弹窗样式 */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.45);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            overflow: hidden;
         }
 
-        .modal-content {
-            width: 520px;
-            background: #fff;
-            border-radius: 8px;
-            padding: 24px;
-            box-sizing: border-box;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        .modal-header { font-size: 18px; font-weight: 600; margin-bottom: 24px; }
-        .form-item { margin-bottom: 16px; }
-        .form-item label { display: block; margin-bottom: 8px; font-size: 14px; color: #333; }
-        .form-item input, .form-item textarea {
-            width: 100%;
-            border: 1px solid #d9d9d9;
-            border-radius: 4px;
-            padding: 8px 12px;
-            box-sizing: border-box;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-        .form-item input:focus, .form-item textarea:focus { outline: none; border-color: var(--primary-color); }
-
-        .upload-area {
-            border: 2px dashed #d9d9d9;
-            background: #fafafa;
-            padding: 24px;
-            text-align: center;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease-in-out;
+        .diagram {
+            width: 266px;
+            height: 150px;
             position: relative;
+            left: 0;
+            top: -8px;           
+            //background-color: #EAEAEA;
+            background-image: url(https://km.sankuai.com/api/file/cdn/2714970292/185947265573?contentType=1&isNewContent=false);
+            background-size: cover;
+            background-repeat: no-repeat;            
+            overflow: hidden;
         }
-        .upload-area.dragging { border-color: var(--primary-color); background: rgba(22, 111, 247, 0.02); }
-        .upload-placeholder i { color: #999; margin-bottom: 8px; }
-        .upload-placeholder p { font-size: 13px; color: #666; margin: 0; }
-        .preview-img-container { display: none; position: relative; width: 64px; height: 64px; margin: 0 auto; }
-        .preview-img-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
-        .remove-upload { position: absolute; top: -8px; right: -8px; background: #ff4d4f; color: #fff; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; }
 
-        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; }
-        
-        /* 状态显示 */
-        .loading-state { text-align: center; padding: 40px; color: #999; }
-        .empty-state { text-align: center; padding: 60px; color: #999; font-size: 14px; }
-
-        /* 通知气泡 */
-        #toast {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 10px 24px;
-            background: #333;
-            color: #fff;
-            border-radius: 4px;
-            font-size: 14px;
-            z-index: 2000;
+        /* Shared styles for all small form elements */
+        .form-piece {
+            position: absolute;
+            width: 30px;
+            height: 40px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            transform-origin: center center;
+            /* Hide the original template elements */
             display: none;
-            animation: slideDown 0.3s ease;
         }
-        @keyframes slideDown { from { top: -50px; opacity: 0; } to { top: 20px; opacity: 1; } }
+        
+        /* This class will be added to the generated clones to make them visible */
+        .clone {
+            display: block;
+        }
+
+        /* Specific styles for each element based on requirements */
+        .style-empty-form-1 {
+            left: 120px;
+            top: 120px;
+            background-image: url('https://km.sankuai.com/api/file/cdn/2714970292/185935040404?contentType=1&isNewContent=false');
+            transform: rotate(-10deg) scale(0.12);
+        }
+
+        .style-empty-form-2 {
+            left: 130px;
+            top: 120px;
+            background-image: url('https://km.sankuai.com/api/file/cdn/2714970292/185935040404?contentType=1&isNewContent=false');
+            transform: rotate(0deg) scale(0.12);
+        }
+
+        .style-full-form-1 {
+            left: 250px;
+            top: -66px;
+            background-image: url('https://km.sankuai.com/api/file/cdn/2714970292/185936478078?contentType=1&isNewContent=false');
+            transform: rotate(30deg) scale(1.3);
+        }
+
+        .style-full-form-2 {
+            left: 190px;
+            top: -66px;
+            background-image: url('https://km.sankuai.com/api/file/cdn/2714970292/185936478078?contentType=1&isNewContent=false');
+            transform: rotate(20deg) scale(1.3);
+        }
+
+        .table-graphic {
+            position: absolute;
+            width: 88px;
+            height: 50px;
+            left: 89px;
+            top: 96px;
+            background-image: url('https://km.sankuai.com/api/file/cdn/2714970292/185945198704?contentType=1&isNewContent=false');
+            background-size: contain;
+            z-index:99;
+        }
+
+        .close-icon {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            right: 21px;
+            top: 13px;
+            background-image: url('https://km.sankuai.com/api/file/cdn/2714970292/185949417138?contentType=1&isNewContent=false');
+            background-size: contain;
+            cursor: pointer;
+        }
+        
+        #preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            font-size: 1.2em;
+            color: #555;
+        }
     </style>
 </head>
 <body>
 
-<div id="toast"></div>
-
-<div class="app-container">
-    <!-- 模拟模式通知 -->
-    <div id="demoBanner" class="demo-banner" style="display:none;">
-        <i data-lucide="info" style="width:16px; height:16px;"></i>
-        <span>当前为<b>前端模拟模式</b>。您可以体验 UI 交互，如需持久化存储，请在代码中配置 Supabase 凭据。</span>
+    <div id="preloader">
+        <span>图片加载中...</span>
     </div>
 
-    <!-- 主页面 (Marketplace) -->
-    <div id="main-page" class="page active">
-        <div class="create-blank-card" onclick="window.open('https://kuaida.sankuai.com/approval/admin/create', '_blank')">
-            <i data-lucide="plus" style="width:32px; height:32px;"></i>
-            <span>从空白创建</span>
-        </div>
-
-        <div class="section-header">
-            <div class="header-left">
-                <h2>从模板创建</h2>
-                <i data-lucide="flame" style="color: #ff4d4f; width: 20px; height: 20px;"></i>
-            </div>
-            <div class="header-right">
-                <div class="search-wrapper">
-                    <i data-lucide="search" class="search-icon" style="width: 16px; height: 16px;"></i>
-                    <input type="text" class="search-input" placeholder="搜索名称或描述" id="searchInput">
-                    <i data-lucide="x-circle" class="clear-icon" id="clearBtn" style="width: 16px; height: 16px;"></i>
-                </div>
-                <button class="btn-primary" onclick="switchPage('admin')" id="adminEntrance">后台管理</button>
+    <div class="popup">
+        <div class="diagram-wrapper"> 
+            <div class="diagram">
+                <!-- These are now TEMPLATES for creating the pools -->
+                <div id="empty-form-1" class="form-piece style-empty-form-1" data-rotation="-30"></div>
+                <div id="empty-form-2" class="form-piece style-empty-form-2" data-rotation="-20"></div>
+                <div id="full-form-1" class="form-piece style-full-form-1" data-rotation="30"></div>
+                <div id="full-form-2" class="form-piece style-full-form-2" data-rotation="20"></div>
+                <div class="table-graphic"></div>
             </div>
         </div>
-
-        <div id="templateGrid" class="template-grid">
-            <div class="loading-state">数据加载中...</div>
-        </div>
+        <div class="close-icon"></div>
     </div>
 
-    <!-- 后台设置页面 (Admin) -->
-    <div id="admin-page" class="page">
-        <div class="admin-header">
-            <div class="header-left">
-                <button class="btn-ghost" onclick="switchPage('main')">
-                    <i data-lucide="chevron-left" style="width:16px; display:inline-block; vertical-align:middle;"></i> 返回
-                </button>
-                <h2 style="margin-left: 16px; display:inline-block; vertical-align:middle;">模板管理中心</h2>
-            </div>
-            <button class="btn-primary" onclick="openModal()">+ 添加审批模板</button>
-        </div>
-        
-        <div id="adminTableContainer" style="background: #fafafa; border-radius: 8px; padding: 20px;">
-            <p style="color: #666; font-size: 14px;">当前共 <span id="mubanCount">0</span> 个模板</p>
-            <div id="adminList" style="margin-top: 12px; font-size: 13px; color: #999;">
-                (模拟模式：添加的模板仅在当前会话生效)
-            </div>
-        </div>
-    </div>
-</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
 
-<!-- 添加模板弹窗 -->
-<div class="modal-overlay" id="modalOverlay">
-    <div class="modal-content">
-        <div class="modal-header">新建审批模板</div>
-        
-        <div class="form-item">
-            <label>模板标题</label>
-            <input type="text" id="mubanTitle" placeholder="请输入模板名称">
-        </div>
+            const imageUrls = [
+                'https://km.sankuai.com/api/file/cdn/2714970292/185946730941?contentType=1&isNewContent=false',
+                'https://km.sankuai.com/api/file/cdn/2714970292/185945198704?contentType=1&isNewContent=false',
+                'https://km.sankuai.com/api/file/cdn/2714970292/185935040404?contentType=1&isNewContent=false',
+                'https://km.sankuai.com/api/file/cdn/2714970292/185936478078?contentType=1&isNewContent=false',
+                'https://km.sankuai.com/api/file/cdn/2714970292/185949417138?contentType=1&isNewContent=false'
+            ];
 
-        <div class="form-item">
-            <label>功能描述</label>
-            <textarea id="mubanDesc" rows="3" placeholder="请简要说明模板用途（最多3行）"></textarea>
-        </div>
+            let imagesLoaded = 0;
+            function onAllImagesLoaded() {
+                document.getElementById('preloader').style.display = 'none';
+                initializePools();
+                startAnimations();
+            }
 
-        <div class="form-item">
-            <label>预览链接</label>
-            <input type="url" id="mubanYulan" placeholder="https://...">
-        </div>
-
-        <div class="form-item">
-            <label>使用链接</label>
-            <input type="url" id="mubanShiyong" placeholder="https://...">
-        </div>
-
-        <div class="form-item">
-            <label>模板图标</label>
-            <div class="upload-area" id="dropArea">
-                <input type="file" id="fileInput" hidden accept="image/*">
-                <div class="upload-placeholder" id="uploadPlaceholder">
-                    <i data-lucide="upload-cloud" style="width:32px; height:32px; margin:0 auto 8px;"></i>
-                    <p>点击或拖拽上传图标 (PNG/JPG)</p>
-                </div>
-                <div class="preview-img-container" id="previewContainer">
-                    <img id="previewImg" src="" alt="预览">
-                    <div class="remove-upload" id="removeBtn">×</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="modal-footer">
-            <button class="btn-ghost" onclick="closeModal()">取消</button>
-            <button class="btn-primary" id="saveBtn" style="min-width: 80px;">添加</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // --- 1. Supabase 配置 (请在此填入您的真实凭据) ---
-    const SUPABASE_URL = ''; 
-    const SUPABASE_KEY = ''; 
-    
-    let supabaseClient = null;
-    let isMockMode = true; // 默认模拟模式
-
-    function checkSupabase() {
-        if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            isMockMode = false;
-        } else {
-            document.getElementById('demoBanner').style.display = 'flex';
-        }
-    }
-
-    // --- 2. 预制 8 个模拟模板数据 ---
-    const mockTemplates = [
-        { id: 1, title: '通用请假申请', description: '适用于事假、病假、年假等各类常规请假申请，支持自动计算时长。', yulan_link: '#', shiyong_link: '#', tupian_link: 'https://img.icons8.com/fluency/96/calendar.png', is_new: true },
-        { id: 2, title: '加班申请单', description: '用于员工提报加班时长及补偿方式，支持关联打卡记录。', yulan_link: '#', shiyong_link: '#', tupian_link: 'https://img.icons8.com/fluency/96/time.png', is_new: false },
-        { id: 3, title: '差旅报销申请', description: '包含交通、住宿、补贴等多维度报销明细，支持发票自动识别。', yulan_link: '#', shiyong_link: '#', tupian_link: 'https://img.icons8.com/fluency/96/airplane-take-off.png', is_new: true },
-        { id: 4, title: '办公用品申领', description: '快速申请办公耗材、电脑周边等设备，支持库存状态即时同步。', yulan_link: '#', shiyong_link: '#', tupian_link: 'https://img.icons8.com/fluency/96/stapler.png', is_new: false },
-        { id: 5, title: '转正申请评价', description: '适用于试用期员工转正流程，集成导师评价及部门考核评分。', yulan_link: '#', shiyong_link: '#', tupian_link: 'https://img.icons8.com/fluency/96/user-male-circle.png', is_new: false },
-        { id: 6, title: '离职会签申请', description: '覆盖人力、财务、IT等多部门会签流程，确保物资及账号安全回收。', yulan_link: '#', shiyong_link: '#', tupian_link: 'https://img.icons8.com/fluency/96/exit.png', is_new: false },
-        { id: 7, title: '印章使用申请', description: '公章、合同章等重要印章使用管控，支持上传合同附件备份。', yulan_link: '#', shiyong_link: '#', tupian_link: 'https://img.icons8.com/fluency/96/stamp.png', is_new: true },
-        { id: 8, title: '付款审批单', description: '企业对外支付、合同结款、预付款项申请，严格管控资金流向。', yulan_link: '#', shiyong_link: '#', tupian_link: 'https://img.icons8.com/fluency/96/money-bag.png', is_new: false }
-    ];
-
-    let templates = [];
-    let selectedFile = null;
-
-    // --- 3. UI 初始化 ---
-    function init() {
-        lucide.createIcons();
-        checkSupabase();
-        fetchTemplates();
-        setupEventListeners();
-    }
-
-    // --- 4. 数据获取 ---
-    async function fetchTemplates() {
-        const grid = document.getElementById('templateGrid');
-        
-        if (isMockMode) {
-            // 模拟加载延迟
-            setTimeout(() => {
-                if (templates.length === 0) templates = [...mockTemplates];
-                renderGrid(templates);
-                document.getElementById('mubanCount').innerText = templates.length;
-            }, 500);
-            return;
-        }
-
-        try {
-            const { data, error } = await supabaseClient
-                .from('muban_info')
-                .select('*');
-            if (error) throw error;
-            templates = data || [];
-            renderGrid(templates);
-            document.getElementById('mubanCount').innerText = templates.length;
-        } catch (err) {
-            console.error(err);
-            grid.innerHTML = `<div class="empty-state">加载失败: ${err.message}</div>`;
-        }
-    }
-
-    function renderGrid(dataList) {
-        const grid = document.getElementById('templateGrid');
-        if (dataList.length === 0) {
-            grid.innerHTML = '<div class="empty-state">暂无符合条件的模板</div>';
-            return;
-        }
-
-        grid.innerHTML = dataList.map(item => `
-            <div class="template-card">
-                <div class="card-top">
-                    <img src="${item.tupian_link || 'https://via.placeholder.com/48'}" class="card-icon" alt="图标" onerror="this.src='https://img.icons8.com/fluency/48/layers.png'">
-                    ${item.is_new ? '<span class="tag-new">NEW</span>' : ''}
-                </div>
-                <div class="card-title" title="${item.title}">${item.title}</div>
-                <div class="card-desc" title="${item.description}">${item.description}</div>
-                <div class="card-footer">
-                    <a href="${item.yulan_link}" class="btn-action btn-preview">预览</a>
-                    <a href="${item.shiyong_link}" class="btn-action btn-use">使用</a>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // --- 5. 交互逻辑 ---
-    function switchPage(pageId) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(pageId + '-page').classList.add('active');
-        window.scrollTo(0, 0);
-    }
-
-    function openModal() {
-        document.getElementById('modalOverlay').style.display = 'flex';
-    }
-
-    function closeModal() {
-        document.getElementById('modalOverlay').style.display = 'none';
-        resetForm();
-    }
-
-    function resetForm() {
-        document.getElementById('mubanTitle').value = '';
-        document.getElementById('mubanDesc').value = '';
-        document.getElementById('mubanYulan').value = '';
-        document.getElementById('mubanShiyong').value = '';
-        selectedFile = null;
-        document.getElementById('previewContainer').style.display = 'none';
-        document.getElementById('uploadPlaceholder').style.display = 'block';
-    }
-
-    function showToast(msg, isError = false) {
-        const toast = document.getElementById('toast');
-        toast.innerText = msg;
-        toast.style.background = isError ? '#ff4d4f' : '#111925';
-        toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 3000);
-    }
-
-    // --- 6. 事件监听 ---
-    function setupEventListeners() {
-        const searchInput = document.getElementById('searchInput');
-        const clearBtn = document.getElementById('clearBtn');
-
-        searchInput.addEventListener('input', (e) => {
-            const val = e.target.value.toLowerCase();
-            clearBtn.style.display = val ? 'block' : 'none';
-            const filtered = templates.filter(t => 
-                t.title.toLowerCase().includes(val) || 
-                t.description.toLowerCase().includes(val)
-            );
-            renderGrid(filtered);
-        });
-
-        clearBtn.addEventListener('click', () => {
-            searchInput.value = '';
-            clearBtn.style.display = 'none';
-            renderGrid(templates);
-            searchInput.focus();
-        });
-
-        const dropArea = document.getElementById('dropArea');
-        const fileInput = document.getElementById('fileInput');
-        dropArea.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length) handleFile(e.target.files[0]);
-        });
-
-        document.getElementById('removeBtn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            selectedFile = null;
-            document.getElementById('previewContainer').style.display = 'none';
-            document.getElementById('uploadPlaceholder').style.display = 'block';
-        });
-
-        document.getElementById('saveBtn').addEventListener('click', submitData);
-    }
-
-    function handleFile(file) {
-        if (!file.type.startsWith('image/')) {
-            showToast('请上传图片文件', true);
-            return;
-        }
-        selectedFile = file;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            document.getElementById('previewImg').src = e.target.result;
-            document.getElementById('previewContainer').style.display = 'block';
-            document.getElementById('uploadPlaceholder').style.display = 'none';
-        };
-        reader.readAsDataURL(file);
-    }
-
-    async function submitData() {
-        const title = document.getElementById('mubanTitle').value.trim();
-        const desc = document.getElementById('mubanDesc').value.trim();
-        const yulan = document.getElementById('mubanYulan').value.trim();
-        const shiyong = document.getElementById('mubanShiyong').value.trim();
-        const btn = document.getElementById('saveBtn');
-
-        if (!title || !desc) {
-            showToast('请填写模板标题和描述', true);
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerText = '提交中...';
-
-        if (isMockMode) {
-            // 模拟提交
-            setTimeout(() => {
-                const newMuban = {
-                    id: Date.now(),
-                    title,
-                    description: desc,
-                    yulan_link: yulan || '#',
-                    shiyong_link: shiyong || '#',
-                    tupian_link: document.getElementById('previewImg').src || 'https://img.icons8.com/fluency/48/layers.png',
-                    is_new: true
+            imageUrls.forEach(url => {
+                const img = new Image();
+                img.src = url;
+                img.onload = () => {
+                    imagesLoaded++;
+                    if (imagesLoaded === imageUrls.length) onAllImagesLoaded();
                 };
-                templates.unshift(newMuban);
-                showToast('模拟添加成功！');
-                btn.disabled = false;
-                btn.innerText = '添加';
-                closeModal();
-                renderGrid(templates);
-                document.getElementById('mubanCount').innerText = templates.length;
-            }, 800);
-            return;
-        }
+                img.onerror = () => {
+                    console.error(`Failed to load image: ${url}`);
+                    imagesLoaded++;
+                    if (imagesLoaded === imageUrls.length) onAllImagesLoaded();
+                }
+            });
 
-        try {
-            const fileName = `${Date.now()}-${selectedFile.name}`;
-            const { data: uploadData, error: uploadError } = await supabaseClient.storage
-                .from('photo')
-                .upload(fileName, selectedFile);
+            function getRandom(min, max) {
+                return Math.random() * (max - min) + min;
+            }
 
-            if (uploadError) throw uploadError;
+            const POOL_SIZE = 10;
+            const pools = {};
 
-            const { data: { publicUrl } } = supabaseClient.storage
-                .from('photo')
-                .getPublicUrl(fileName);
+            const animationConfigs = {
+                'empty-form-1': { id: 'empty-form-1', topRange: [-70, -60], leftRange: [-20, -20], scaleRange: [1.2, 1.3], durationRange: [4, 4.1], easing: 'ease-in'  },
+                'empty-form-2': { id: 'empty-form-2', topRange: [-70, -60], leftRange: [40, 40], scaleRange: [1.2, 1.3], durationRange: [4, 4.1], easing: 'ease-in'  },
+                'full-form-1': { id: 'full-form-1', topRange: [120, 125], leftRange: [110, 110], scaleRange: [0.12, 0.13], durationRange: [4, 4.1], easing: 'ease-out'  },
+                'full-form-2': { id: 'full-form-2', topRange: [120, 125], leftRange: [110, 110], scaleRange: [0.12, 0.13], durationRange: [4, 4.1], easing: 'ease-out'  }
+            };
 
-            const { error: dbError } = await supabaseClient
-                .from('muban_info')
-                .insert([{
-                    title: title,
-                    description: desc,
-                    yulan_link: yulan,
-                    shiyong_link: shiyong,
-                    tupian_link: publicUrl
-                }]);
+            // 1. Create the pools of elements
+            function initializePools() {
+                for (const key in animationConfigs) {
+                    const config = animationConfigs[key];
+                    const template = document.getElementById(config.id);
+                    if (!template) continue;
 
-            if (dbError) throw dbError;
+                    pools[key] = []; // Create an array for this pool
+                    for (let i = 0; i < POOL_SIZE; i++) {
+                        const clone = template.cloneNode(true);
+                        clone.removeAttribute('id');
+                        clone.classList.add('clone'); // Make it visible
+                        template.parentElement.appendChild(clone);
+                        pools[key].push(clone);
+                    }
+                }
+            }
 
-            showToast('添加审批模板成功！');
-            closeModal();
-            fetchTemplates();
-        } catch (err) {
-            console.error(err);
-            showToast('操作失败: ' + err.message, true);
-        } finally {
-            btn.disabled = false;
-            btn.innerText = '添加';
-        }
-    }
+            // 2. Animate a single element from a pool
+            function animateElement(element, config) {
+                 // Get computed styles for accurate start position
+                const computedStyle = window.getComputedStyle(element);
+                const startTransform = computedStyle.transform;
 
-    window.onload = init;
-</script>
+                const duration = getRandom(config.durationRange[0], config.durationRange[1]) * 1000;
+                const targetTop = getRandom(config.topRange[0], config.topRange[1]);
+                const targetLeft = getRandom(config.leftRange[0], config.leftRange[1]);
+                const targetScale = getRandom(config.scaleRange[0], config.scaleRange[1]);
+                // const rotation = element.dataset.rotation || 0;
+                // const targetTransform = `rotate(${rotation}deg) scale(${targetScale})`;
+                // 将它们改成下面的逻辑：
+                let startRotation = parseFloat(element.dataset.rotation || 0);
+                let endRotation = startRotation; // 默认结束角度等于开始角度
 
+                // 判断是左侧图标 (empty-form) 还是右侧图标 (full-form)
+                if (config.id.includes('empty')) {
+                    // 左侧图标，角度增加10度（例如 -30度 变为 -20度）
+                    endRotation -= 20;
+                } else {
+                    // 右侧图标，角度减小10度（例如 30度 变为 20度）
+                    endRotation -= 20;
+                }
+
+                const targetTransform = `rotate(${endRotation}deg) scale(${targetScale})`;
+                
+                // Animate both transform and position
+                element.animate(
+                    [
+                        { transform: startTransform, top: computedStyle.top, left: computedStyle.left },
+                        { transform: targetTransform, top: `${targetTop}px`, left: `${targetLeft}px` }
+                    ],
+                    {
+                        duration: duration,
+                        easing: config.easing 
+                        // IMPORTANT: No 'fill: forwards'. The element will auto-revert on completion.
+                    }
+                );
+            }
+
+            // 3. Start the staggered animation loop for all pools
+            function startAnimations() {
+                for (const key in pools) {
+                    const pool = pools[key];
+                    const config = animationConfigs[key];
+                    let currentIndex = 0;
+
+                    setInterval(() => {
+                        const elementToAnimate = pool[currentIndex];
+                        animateElement(elementToAnimate, config);
+                        
+                        // Move to the next element in the pool for the next interval
+                        currentIndex = (currentIndex + 1) % POOL_SIZE;
+                    }, 750);
+                }
+            }
+        });
+    </script>
 </body>
 </html>
